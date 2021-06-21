@@ -2,14 +2,19 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"math/rand"
 	"net/http"
 )
+
+//go:embed frontend/dist
+var frontend embed.FS
 
 func main() {
 	var port int
@@ -17,6 +22,14 @@ func main() {
 	flag.Parse()
 
 	http.Handle("/api/v1/law", http.HandlerFunc(getRandomLaw))
+
+	stripped, err := fs.Sub(frontend, "frontend/dist")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	frontendFS := http.FileServer(http.FS(stripped))
+	http.Handle("/", frontendFS)
 
 	log.Fatalln(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }
